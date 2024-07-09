@@ -4,59 +4,6 @@ from torch.nn import MultiheadAttention
 from typing import Optional, Tuple
 
 
-class MultiModal_Attention_mechanism(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-        self.hiddim = 3
-        self.globalAvgPool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc_x1 = nn.Linear(in_features=3, out_features=self.hiddim)
-        self.fc_x2 = nn.Linear(in_features=self.hiddim, out_features=3)
-        self.sigmoidx = nn.Sigmoid()
-
-    def forward(self,input_list):
-        new_input_list1 = input_list[0].reshape(1, 1, input_list[0].shape[0], -1)
-        new_input_list2 = input_list[1].reshape(1, 1, input_list[1].shape[0], -1)
-        new_input_list3 = input_list[2].reshape(1, 1, input_list[2].shape[0], -1)
-        XM = torch.cat((new_input_list1, new_input_list2, new_input_list3), 1)
-
-        x_channel_attenttion = self.globalAvgPool(XM)
-
-        x_channel_attenttion = x_channel_attenttion.view(x_channel_attenttion.size(0), -1)
-        x_channel_attenttion = self.fc_x1(x_channel_attenttion)
-        x_channel_attenttion = torch.relu(x_channel_attenttion)
-        x_channel_attenttion = self.fc_x2(x_channel_attenttion)
-        x_channel_attenttion = self.sigmoidx(x_channel_attenttion)
-        x_channel_attenttion = x_channel_attenttion.view(x_channel_attenttion.size(0), x_channel_attenttion.size(1), 1, 1)
-
-        XM_channel_attention = x_channel_attenttion * XM
-        XM_channel_attention = torch.relu(XM_channel_attention)
-
-        return XM_channel_attention[0]
-
-class MFA(nn.Module):
-    def __init__(self, v_dim, q_dim, h_dim, h_out, num_heads=4, dropout=0.1, pooling_k=3):
-        super(MFA, self).__init__()
-
-        self.v_dim = v_dim
-        self.q_dim = q_dim
-        self.h_dim = h_dim
-        self.h_out = h_out
-        self.num_heads = num_heads
-        self.pooling_k = pooling_k
-
-        self.v_net = FCNet([v_dim, h_dim], dropout=dropout)
-        self.q_net = FCNet([q_dim, h_dim], dropout=dropout)
-
-        self.multihead_attention = MultiheadAttention(h_dim, num_heads, dropout=dropout)
-
-        self.output_net = FCNet([h_dim, h_out], dropout=dropout)
-
-        # Add Pooling layer
-        if 1 < pooling_k:
-            self.pooling = nn.AvgPool1d(pooling_k, stride=pooling_k)
-        else:
-            self.pooling = None
 
     def forward(self, v, q):
         v = self.v_net(v)
